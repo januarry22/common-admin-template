@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="mapper.admin.AdminMapper">
+
+	<select id="list" parameterType="object" resultType="hashmap">
+		/*관리자  리스트*/
+		select
+			*
+		from(
+			select
+				(@ROWNUM:=@ROWNUM+1) as rownum
+				,m.*
+	            ,date_format(create_dt, '%Y-%m-%d') create_dt_yyyymmdd
+	      		,date_format(update_dt, '%Y-%m-%d') update_dt_yyyymmdd
+	      		from
+				admin m, (SELECT @ROWNUM:=0) TMP 
+			where
+				delete_yn = 'N'
+				and show_yn = 'Y'
+			order by 
+				create_dt asc
+	     ) sub
+	     order by
+			rownum desc
+	</select>
+
+	
+	<select id="bickdata" parameterType="object" resultType="hashmap">
+		/*빅데이터  리스트*/
+		select
+			*
+		from(
+			select
+				(@ROWNUM:=@ROWNUM+1) as rownum
+				,(select nickname from member where member_seq = m.member_seq) nickname
+				,(
+				case 
+					when success = 1
+					then '성공'
+					when success = 0
+					then '실패'
+				end
+				)success
+				,(select date_format(end_dt, '%Y-%m-%d') from sleep_history where history_seq = m.history_seq) history_end_dt
+	            ,date_format(create_dt, '%Y-%m-%d') create_dt_yyyymmdd
+	      		from
+				bickdata_his m, (SELECT @ROWNUM:=0) TMP 
+			where
+				delete_yn = 'N'
+				and show_yn = 'Y'
+			order by 
+				create_dt_yyyymmdd asc
+	     ) sub
+	     order by
+			rownum desc
+	</select>
+	
+	
+	
+	<select id="search" parameterType="object" resultType="hashmap">
+		
+		/*회원 조회 리스트*/
+
+		select
+			*
+		from(
+			select
+				FORMAT(@ROWNUM := @ROWNUM+1, 0) as rownum
+				,u_id
+				,id as member_seq
+				,phone
+				,recommend_id
+				,name
+	            ,date_format(create_date, '%Y-%m-%d') create_dt_yyyymmdd
+	      		,date_format(update_date, '%Y-%m-%d') update_dt_yyyymmdd
+		        from
+				admin m, (SELECT @ROWNUM:=0) TMP 
+			where
+				 create_date between #{start_1} and #{finish_1}
+				<if test='search_type != null  and (search_type eq "id".toString())'>
+					or u_id like concat('%',#{search_value},'%')
+				</if>
+				<if test='search_type != null  and (search_type eq "name".toString())'>
+					or name like concat('%',#{search_value},'%')
+				</if>
+				<if test='search_type != null  and (search_type eq "phone".toString())'>
+					or phone like concat('%',#{search_value},'%')
+				</if>		
+				<if test='search_type != null  and (search_type eq "all".toString())'>
+					or (name like concat('%',#{search_value},'%') or u_id like concat('%',#{search_value},'%')) or phone like concat('%',#{search_value},'%'))
+				</if>
+				and delete_yn ='N'
+			order by 
+				create_dt asc
+	     ) sub
+	     order by
+			rownum desc
+
+	</select>
+ 
+
+	<insert id="create" parameterType="object">
+		/* 관리자  생성*/
+			insert into
+				admin
+				(
+					id
+					,pw
+					,name
+					,img_url
+					,nickname
+					,phone
+					,create_dt
+					,create_by
+				)
+				values
+				(
+					#{id}
+					,password(#{password})
+					,#{name}
+					,#{img_url}
+					,#{nickname}
+					,#{phone}
+					,now()
+					,#{create_by}
+				)
+		/* INSERT 구문이 실행된 후, 방금 넣은 데이터의 ID를 조회하면 자동으로 DTO 객체에 설정됩니다. */
+		<selectKey keyProperty="admin_seq" resultType="Integer">
+	        SELECT LAST_INSERT_ID()
+	    </selectKey>
+	</insert>
+	
+	
+	
+	<select id="detail" parameterType="string" resultType="hashmap">
+		/*회원 상세정보*/
+		SELECT
+			m.*
+			,(select name from admin where admin_seq = m.create_by) create_by_nm
+			,(select url from common_file where file_seq = m.img_url) file_url
+		  	,date_format(m.create_dt, '%Y-%m-%d') create_dt_yyyymmdd
+            ,date_format(m.update_dt, '%Y-%m-%d') update_dt_yyyymmdd
+		FROM
+			admin m
+		where
+			admin_seq = #{seq}
+	</select>
+	
+	
+	<update id="update_pw" parameterType="object">
+		/*관리자  패스워드 수정*/
+		update admin
+			set 
+				pw = password(#{pw})
+		where 
+			admin_seq = #{admin_seq}
+	</update>
+	
+	<update id="update" parameterType="object">
+		/*관리자 정보 수정*/
+		update admin
+			set 
+				name = #{name}
+				,nickname = #{nickname}
+				,img_url = #{img_url}
+				,phone = #{phone}
+				,update_by = #{write_by}
+		where 
+			admin_seq = #{admin_seq}
+	</update>
+
+</mapper>

@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="mapper.admin.ContentsMapper">
+
+	<select id="list" parameterType="object" resultType="hashmap">
+		/*content 리스트*/
+		select
+			*
+		from(
+			select
+				(@ROWNUM:=@ROWNUM+1) as rownum
+				,m.*
+	            ,date_format(create_dt, '%Y-%m-%d') create_dt_yyyymmdd
+	      		,date_format(update_dt, '%Y-%m-%d') update_dt_yyyymmdd
+	      		,concat(code_name,'-',code_number) code
+	      		,(select name from sleep_type where type_seq = m.type_seq) as type
+	      		,(select count(*) from content_goods where content_seq = m.content_seq and delete_yn ='N') content_goods
+	      		,(select count(*) from sleep_history where last_content_seq = m.content_seq and delete_yn ='N') content_play
+	      		from
+				content m, (SELECT @ROWNUM:=0) TMP 
+			where
+				delete_yn = 'N'
+			order by 
+				create_dt desc
+	     ) sub
+	     order by
+			rownum desc
+	</select>
+
+
+	<select id="console" parameterType="object" resultType="hashmap">
+			/* 수면유형 컨텐츠 리스트*/
+			select
+				*
+			from(
+				select
+					(@ROWNUM:=@ROWNUM+1) as rownum
+					,m.*
+		            ,date_format(create_dt, '%Y-%m-%d') create_dt_yyyymmdd
+		      		,date_format(update_dt, '%Y-%m-%d') update_dt_yyyymmdd
+		      		,(select name from admin where admin_seq = m.create_by) create_by_nm
+		      		from
+					sleep_console m, (SELECT @ROWNUM:=0) TMP 
+				where
+					delete_yn = 'N'
+				order by 
+					create_dt asc
+		     ) sub
+		     order by
+				rownum desc
+		</select>
+		
+ 
+	<insert id="console_create" parameterType="object">
+		/*console 생성*/
+			insert into
+				sleep_console
+				(
+					 title
+					,content
+					,create_dt
+					,create_by
+				)
+				values
+				(
+					#{title}
+					,#{content}
+					,now()
+					,#{create_by}
+				)
+	</insert>
+	
+	
+
+	<insert id="create" parameterType="object">
+		/*content 생성*/
+			insert into
+				content
+				(
+					type_seq
+					,code_name
+					,code_number
+					,title
+				<!-- 	<if test="gif_seq != null and !''.equals(gif_seq.toString())">
+					,gif_seq
+					</if> -->
+					,video_seq
+					,play_time
+					,create_dt
+					,create_by
+				)
+				values
+				(
+					#{type_seq}
+					,#{code_name}
+					,#{code_number}
+					,#{title}
+				<!-- 	<if test="gif_seq != null and !''.equals(gif_seq.toString())">
+					,#{gif_seq}
+					</if> -->
+					,#{video_seq}
+					,#{play_time}
+					,now()
+					,#{create_by}
+				)
+	</insert>
+	
+	
+	
+	<select id="detail" parameterType="string" resultType="hashmap">
+		/*content 상세정보*/
+		SELECT
+			m.*
+	      	,(select count(*) from content_goods where content_seq = m.content_seq) content_goods
+	      	,(select count(*) from content_play where content_seq = m.content_seq) content_play
+			,(select name from admin where admin_seq = m.create_by) create_by_nm
+	      	,(select name from sleep_type where type_seq = m.type_seq) as type
+	      	,(select url from common_file where file_seq = m.gif_seq) gif_file_url
+	      	,(select url from common_file where file_seq = m.video_seq) file_url
+		  	,date_format(m.create_dt, '%Y-%m-%d') create_dt_yyyymmdd
+            ,date_format(m.update_dt, '%Y-%m-%d') update_dt_yyyymmdd
+		FROM
+			content m
+		where
+			content_seq = #{seq}
+	</select>
+	
+	
+	<select id="console_detail" parameterType="string" resultType="hashmap">
+		/*content 상세정보*/
+		SELECT
+			m.*
+			,(select name from admin where admin_seq = m.create_by) create_by_nm
+		  	,date_format(m.create_dt, '%Y-%m-%d') create_dt_yyyymmdd
+            ,date_format(m.update_dt, '%Y-%m-%d') update_dt_yyyymmdd
+		FROM
+			sleep_console m
+		where
+			console_seq = #{seq}
+	</select>
+	
+	<update id="update" parameterType="object">
+		/*content 정보 수정*/
+		update content
+			set 
+				type_seq = #{type_seq}
+				,code_name = #{code_name}
+				,code_number = #{code_number}
+				,title = #{title}
+			<!-- 	<if test="gif_seq != null and !''.equals(gif_seq.toString())">
+				,gif_seq = #{gif_seq}
+				</if> -->
+				,video_seq = #{video_seq}
+				,play_time = #{play_time}
+				,update_dt = now()
+				,update_by = #{write_by}
+		where 
+			content_seq = #{content_seq}
+	</update>
+
+
+	
+	<update id="console_update" parameterType="object">
+		/*content 정보 수정*/
+		update sleep_console
+			set 
+				title = #{title}
+				,content = #{content}
+				,update_dt = now()
+				,update_by = #{write_by}
+		where 
+			console_seq = #{console_seq}
+	</update>
+
+</mapper>

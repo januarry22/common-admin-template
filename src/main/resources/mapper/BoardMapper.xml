@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="mapper.admin.BoardMapper">
+
+	<select id="list" parameterType="object" resultType="hashmap">
+		/*board 리스트*/
+		select
+			*
+		from(
+			select
+				(@ROWNUM:=@ROWNUM+1) as rownum
+				,m.*
+	            ,date_format(create_dt, '%Y-%m-%d') create_dt_yyyymmdd
+	      		,date_format(update_dt, '%Y-%m-%d') update_dt_yyyymmdd
+	      		,(select name from common where up_code = m.up_code and info_code = m.info_code ) as type
+	      		,(select note from common where up_code = m.up_code and info_code = m.info_code ) as type_info
+	      		from
+				board m, (SELECT @ROWNUM:=0) TMP 
+			where
+				delete_yn = 'N'
+			order by 
+				create_dt asc
+	     ) sub
+	     order by
+			rownum desc
+	</select>
+
+	
+	<select id="search" parameterType="object" resultType="hashmap">
+		
+		/*board 조회 리스트*/
+
+		select
+			*
+		from(
+			select
+				FORMAT(@ROWNUM := @ROWNUM+1, 0) as rownum
+				,u_id
+				,id as member_seq
+				,phone
+				,recommend_id
+				,name
+	            ,date_format(create_date, '%Y-%m-%d') create_dt_yyyymmdd
+	      		,date_format(update_date, '%Y-%m-%d') update_dt_yyyymmdd
+		        from
+				member m, (SELECT @ROWNUM:=0) TMP 
+			where
+				 create_date between #{start_1} and #{finish_1}
+				<if test='search_type != null  and (search_type eq "id".toString())'>
+					or u_id like concat('%',#{search_value},'%')
+				</if>
+				<if test='search_type != null  and (search_type eq "name".toString())'>
+					or name like concat('%',#{search_value},'%')
+				</if>
+				<if test='search_type != null  and (search_type eq "phone".toString())'>
+					or phone like concat('%',#{search_value},'%')
+				</if>		
+				<if test='search_type != null  and (search_type eq "all".toString())'>
+					or (name like concat('%',#{search_value},'%') or u_id like concat('%',#{search_value},'%')) or phone like concat('%',#{search_value},'%'))
+				</if>
+				and delete_yn ='N'
+			order by 
+				create_dt asc
+	     ) sub
+	     order by
+			rownum desc
+
+	</select>
+ 
+
+	<insert id="create" parameterType="object">
+		/*board 생성*/
+			insert into
+				board
+				(
+					title
+					,content
+					,up_code
+					,info_code
+					,create_dt
+					,create_by
+				)
+				values
+				(
+					#{title}
+					,#{content}
+					,#{up_code}
+					,#{info_code}
+					,now()
+					,#{write_by}
+				)
+	</insert>
+	
+	
+	
+	<select id="detail" parameterType="string" resultType="hashmap">
+		/*board 상세정보*/
+		SELECT
+			m.*
+			,(select name from admin where admin_seq = m.create_by) create_by_nm
+	      	,(select name from common where up_code = m.up_code and info_code = m.info_code ) as type
+	      	,(select note from common where up_code = m.up_code and info_code = m.info_code ) as type_info
+		  	,date_format(m.create_dt, '%Y-%m-%d') create_dt_yyyymmdd
+            ,date_format(m.update_dt, '%Y-%m-%d') update_dt_yyyymmdd
+		FROM
+			board m
+		where
+			board_seq = #{seq}
+	</select>
+	
+	
+	<update id="update" parameterType="object">
+		/*board 정보 수정*/
+		update board
+			set 
+				title = #{title}
+				,content = #{content}
+				,up_code = #{up_code}
+				,info_code = #{info_code}
+				,update_by = #{write_by}
+				,update_dt = now()
+		where 
+			board_seq = #{board_seq}
+	</update>
+
+	
+	<update id="remove" parameterType="string" >
+		/*board 정보 삭제*/
+		update board
+			set 
+			delete_yn = 'Y'
+			,show_yn = 'N'
+		where 
+			board_seq = #{seq} 
+	</update>
+	
+	<select id="common" parameterType="string" resultType="hashmap">
+		/*board 카테고리 상세정보*/
+		SELECT
+			*
+		FROM
+			 common m
+		where
+			delete_yn ='N'
+			and up_code in ('BOARD','NOTICE')
+			 
+	</select>
+</mapper>

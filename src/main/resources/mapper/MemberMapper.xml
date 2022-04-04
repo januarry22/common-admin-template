@@ -1,0 +1,374 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="mapper.admin.MemberMapper">
+
+	<select id="list" parameterType="object" resultType="hashmap">
+		/*회원 리스트*/
+		select
+			*
+		from(
+			select
+				(@ROWNUM:=@ROWNUM+1) as rownum
+				,m.*
+	            ,date_format(create_dt, '%Y-%m-%d') create_dt_yyyymmdd
+	      		,date_format(update_dt, '%Y-%m-%d') update_dt_yyyymmdd
+	      		,(select name from common where up_code = m.job_up_code and info_code = m.job_info_code ) as job
+	      		,(CASE
+						WHEN login_type = 'S' then '고니 회원가입'
+	      				WHEN login_type = 'N' then '네이버'
+	      				WHEN login_type = 'K' then '카카오'
+	      				WHEN login_type = 'A' then 'Apple'
+	      				WHEN login_type = 'G' then 'Google'
+	      				WHEN login_type = 'F' then 'Facebook'
+	      			ELSE ''
+	      			END
+	      		) as login_type_info
+	      		,(select name from sleep_type where type_seq = m.type_seq) type_name
+	      		from
+				member m, (SELECT @ROWNUM:=0) TMP 
+			where
+				delete_yn = 'N'
+				and show_yn = 'Y'
+			order by 
+				create_dt desc
+	     ) sub
+	     order by
+			rownum desc
+	</select>
+
+	
+	<select id="excel" parameterType="object" resultType="java.util.LinkedHashMap">
+		/*회원 엑셀 리스트*/
+		select
+            member_seq
+	        ,nickname
+		    ,date_format(m.create_dt, '%Y-%m-%d') create_dt_yyyymmdd
+	     	,sex
+	        ,yyyy
+	      	,job_info_code
+            ,(case
+                   when type_seq is not null then type_seq else 'null' end
+            ) as type_seq
+	      		from
+				member m
+			where
+				m.delete_yn = 'N'
+				and m.show_yn = 'Y'
+			order by
+				m.create_dt desc
+	</select>
+	
+	<select id="search" parameterType="object" resultType="hashmap">
+		/*회원 조회 리스트*/
+		select
+			*
+		from(
+			select
+				FORMAT(@ROWNUM := @ROWNUM+1, 0) as rownum
+				,email
+				,nickname
+				,(select name from sleep_type where type_seq = m.type_seq) type_name
+			    ,(CASE
+						WHEN login_type = 'S' then '고니 회원가입'
+	      				WHEN login_type = 'N' then '네이버'
+	      				WHEN login_type = 'K' then '카카오'
+	      				WHEN login_type = 'A' then 'Apple'
+	      				WHEN login_type = 'G' then 'Google'
+	      				WHEN login_type = 'F' then 'Facebook'
+	      			ELSE '-'
+	      			END
+	      		) as login_type_info
+	            ,date_format(create_dt, '%Y-%m-%d') create_dt_yyyymmdd
+			    ,exper_yn
+		        from
+				member m, (SELECT @ROWNUM:=0) TMP
+			    where
+				 delete_yn ='N'
+				and show_yn = 'Y'
+			order by 
+				create_dt desc
+	     ) sub
+			where
+				<if test='search_type != null  and (search_type eq "type_name".toString())'>
+			    sub.type_name like concat('%',#{search_value},'%')
+			    </if>
+			    <if test='search_type != null  and (search_type eq "nickname".toString())'>
+			    sub.nickname like concat('%',#{search_value},'%')
+			    </if>
+	     order by
+			rownum desc
+			
+	</select>
+ 
+
+	<insert id="create" parameterType="object">
+		/*회원 생성*/
+			insert into
+				member
+				(
+					email
+					,pw
+					,nickname
+					,sex
+					,yyyy
+					,job_up_code
+					,job_info_code
+					,login_type
+					,create_dt
+					,create_by
+				)
+				values
+				(
+					#{email}
+					,password(#{password})
+					,#{nickname}
+					,#{sex}
+					,#{yyyy}
+					,#{job_up_code}
+					,#{job_info_code}
+					,'S'
+					,now()
+					,#{create_by}
+				)
+		/* INSERT 구문이 실행된 후, 방금 넣은 데이터의 ID를 조회하면 자동으로 DTO 객체에 설정됩니다. */
+		<selectKey keyProperty="member_seq" resultType="Integer">
+	        SELECT LAST_INSERT_ID()
+	    </selectKey>
+	</insert>
+	
+	
+	
+	<select id="excel_drug" parameterType="object" resultType="hashmap">
+		/*회원 질병, 약 */
+		select
+			(case when drug_seq is not null then drug_seq
+				else '0'
+				end
+			) as result
+	    from 
+	    	member_drug_join
+	    where 
+	    	delete_yn = 'N'
+			and show_yn = 'Y'
+			and member_seq = #{member_seq}			
+	</select>
+	
+	
+	
+	<select id="detail" parameterType="string" resultType="hashmap">
+		/*회원 상세정보*/
+		SELECT
+			m.*
+			,(select name from admin where admin_seq = m.create_by) create_by_nm
+	      	,(select name from common where up_code = m.job_up_code and info_code = m.job_info_code ) as job
+	      	,(select url from common_file where file_seq = m.img_seq) as img_url
+	      	,(select count(*) from visit_history where member_seq = m.member_seq and delete_yn ='N') visit_count
+	      	,(select date_format(max(create_dt), '%Y-%m-%d') from visit_history where member_seq = m.member_seq and delete_yn ='N') visit_date
+		  	,date_format(m.create_dt, '%Y-%m-%d') create_dt_yyyymmdd
+            ,date_format(m.update_dt, '%Y-%m-%d') update_dt_yyyymmdd
+            ,(CASE
+						WHEN login_type = 'S' then '고니 회원가입'
+	      				WHEN login_type = 'N' then '네이버'
+	      				WHEN login_type = 'K' then '카카오'
+	      				WHEN login_type = 'A' then 'Apple'
+	      				WHEN login_type = 'G' then 'Google'
+	      				WHEN login_type = 'F' then 'Facebook'
+	      			ELSE ''
+	      			END
+	      		) as login_type_info
+	      	,IF(hobby = '1','있음', '없음') fm_hobby
+	      	,(CASE
+						WHEN small_talk = '1' then '주 1-2회 '
+	      				WHEN small_talk = '2' then '주 3회 이상'
+	      				WHEN small_talk = '3' then '그렇지 않음'
+	      			ELSE ''
+	      			END	
+	      	 ) as fm_small_talk
+		    ,IF(regularity = '1','규칙적', '불규칙적') fm_regularity
+		    ,IF(have_a_com = '1','있음', '없음') fm_have_a_com
+		    ,IF(youtube = '1','예', '아니오') fm_youtube
+		    ,IF(music = '1','예', '아니오') fm_music
+		    ,IF(diary = '1','예', '아니오') fm_diary
+	        ,CONCAT(substr(bedtime,1,2), ':', substr(bedtime,3,4)) fm_bedtime
+	        ,CONCAT(substr(q_wake_up_time,1,2), ':', substr(q_wake_up_time,3,4)) fm_q_wake_up_time
+		FROM
+			member m
+		where
+			member_seq = #{seq}
+	</select>
+	
+	<select id="comment" parameterType="string" resultType="hashmap">
+		/*회원 커멘트*/
+		select
+			*
+		from(
+			select
+				(@ROWNUM:=@ROWNUM+1) as rownum
+				,m.*
+	            ,date_format(create_dt, '%Y-%m-%d') create_dt_yyyymmdd
+	      		from
+				member_comment m, (SELECT @ROWNUM:=0) TMP 
+			where
+				delete_yn = 'N'
+				and show_yn = 'Y'
+				and member_seq = #{seq}
+			order by 
+				create_dt_yyyymmdd asc
+	     ) sub
+	     order by
+			rownum desc
+	</select>
+	
+	<insert id="comment_create" parameterType="object">
+		/*회원 코멘트 생성*/
+			insert into
+				member_comment
+				(
+					member_seq
+					,title
+					,content
+					,create_dt
+					,create_by
+				)
+				values
+				(
+					#{member_seq}
+					,#{title}
+					,#{content}
+					,now()
+					,#{create_by}
+				)
+	</insert>
+	
+	
+	<select id="comment_detail" parameterType="string" resultType="hashmap">
+		/*회원 커멘트 상세 */
+		select
+			*
+		from 
+			member_comment
+		where 
+			comment_seq = #{seq}
+	</select>
+	
+	<select id="goods" parameterType="string" resultType="hashmap">
+		/*회원 좋아요 */
+		select
+			*
+		from(
+			select
+				(@ROWNUM:=@ROWNUM+1) as rownum
+				,m.*
+				,(select title from content where content_seq = m.content_seq) content_title
+	            ,date_format(create_dt, '%Y-%m-%d') create_dt_yyyymmdd
+	      		from
+				content_goods m, (SELECT @ROWNUM:=0) TMP 
+			where
+				delete_yn = 'N'
+				and show_yn = 'Y'
+				and member_seq = #{seq}
+			order by 
+				create_dt_yyyymmdd asc
+	     ) sub
+	     order by
+			rownum desc
+	</select>
+	
+	
+	<select id="drug" parameterType="string" resultType="hashmap">
+		/*회원 질병, 약 */
+		select
+			*
+		from(
+			select
+				(@ROWNUM:=@ROWNUM+1) as rownum
+				,m.*
+				,(select name from drug where drug_seq = m.drug_seq) drug_name
+	            ,date_format(create_dt, '%Y-%m-%d') create_dt_yyyymmdd
+	      		,date_format(update_dt, '%Y-%m-%d') update_dt_yyyymmdd
+	      		from
+				member_drug_join m, (SELECT @ROWNUM:=0) TMP 
+			where
+				delete_yn = 'N'
+				and show_yn = 'Y'
+				and member_seq = #{seq}
+			order by 
+				create_dt_yyyymmdd asc
+	     ) sub
+	     order by
+			rownum desc
+	</select>
+	
+	<select id="history" parameterType="string" resultType="hashmap">
+		/*회원 history */
+		select
+			*
+		from(
+			select
+				(@ROWNUM:=@ROWNUM+1) as rownum
+				,(select name from sleep_type where type_seq = m.prev_type_seq) pre_type
+				,(select name from sleep_type where type_seq = m.type_seq) cur_type
+	            ,date_format(create_dt, '%Y-%m-%d') create_dt_yyyymmdd
+				from
+				type_update_his m, (SELECT @ROWNUM:=0) TMP
+			where
+				delete_yn = 'N'
+				and show_yn = 'Y'
+				and member_seq = #{seq}
+	     ) sub
+	     order by
+			rownum desc
+	</select>
+	
+	
+	<update id="update_pw" parameterType="object">
+		/*회원 패스워드 수정*/
+		update member
+			set 
+				pw = password(#{pw})
+		where 
+			member_seq = #{member_seq}
+	</update>
+	
+	
+	<update id="exper_yn" parameterType="object">
+		/*회원 체험단 여부 수정*/
+		update member
+			set 
+				exper_yn = #{exper_yn}
+		where 
+			member_seq = #{member_seq}
+	</update>
+	
+	
+	<update id="update" parameterType="object">
+		/*회원 정보 수정*/
+		update member
+			set 
+				email = #{email}
+				<if test="password != null and !''.equals(password.toString())">
+				,pw = password(#{password})
+				</if>
+				,nickname = #{nickname}
+				<!-- ,login_type = #{price} -->
+				,sex = #{sex}
+				,yyyy = #{yyyy}
+				,job_up_code = #{job_up_code}
+				,job_info_code = #{job_info_code}
+		where 
+			member_seq = #{member_seq}
+	</update>
+
+	
+	<update id="remove" parameterType="string" >
+		/*회원 정보 삭제*/
+		update member
+			set 
+			delete_yn = 'Y'
+			,show_yn = 'N'
+		where 
+			member_seq = #{seq} 
+	</update>
+	
+</mapper>
