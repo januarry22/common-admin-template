@@ -10,7 +10,7 @@
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
-<title>모바일 명함 프로그램 </title>
+<title>관리자 프로그램 </title>
 
 	<script src="/resources/js/commonAjax.js"></script>
 
