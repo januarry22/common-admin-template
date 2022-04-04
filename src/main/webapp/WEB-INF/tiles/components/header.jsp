@@ -26,7 +26,7 @@ function sessionLogout(){
       <!-- ============================================================== -->
       <!-- Logo -->
       <!-- ============================================================== -->
-      <a class="navbar-brand" href="index.html">
+      <a class="navbar-brand" href="/">
         <!-- Logo icon -->
         <b class="logo-icon ps-2">
           <!--You can put here icon as well // <i class="wi wi-sunset"></i> //-->
@@ -163,7 +163,7 @@ function sessionLogout(){
         <li class="sidebar-item">
           <a
                   class="sidebar-link waves-effect waves-dark sidebar-link"
-                  href="/dashboard"
+                  href="/"
                   aria-expanded="false"
           ><i class="mdi mdi-view-dashboard"></i
           ><span class="hide-menu">Dashboard</span></a
@@ -175,16 +175,16 @@ function sessionLogout(){
                   href="javascript:void(0)"
                   aria-expanded="false"
           ><i class="mdi mdi-server"></i
-          ><span class="hide-menu">회사 관리</span></a
+          ><span class="hide-menu">회원 관리</span></a
           >
           <ul aria-expanded="false" class="collapse first-level">
             <li class="sidebar-item">
               <a href="/admin/company/company_list" class="sidebar-link"
               ><i class="mdi mdi-information-outline"></i
-              ><span class="hide-menu"> 회사 정보 관리 </span></a
+              ><span class="hide-menu"> 회원 관리 </span></a
               >
             </li>
-            <li class="sidebar-item">
+         <!--    <li class="sidebar-item">
               <a href="/admin/company/company_branch" class="sidebar-link"
               ><i class="mdi mdi-server-plus"></i
               ><span class="hide-menu"> 지점 / 부서 관리 </span></a
@@ -195,7 +195,7 @@ function sessionLogout(){
               ><i class="mdi mdi-wallet-membership"></i
               ><span class="hide-menu"> 회사 멤버 관리 </span></a
               >
-            </li>
+            </li> -->
           </ul>
         </li>
         <li class="sidebar-item">
@@ -204,10 +204,10 @@ function sessionLogout(){
                   href="/admin/section/section_list"
                   aria-expanded="false"
           ><i class="mdi mdi-shape-plus"></i
-          ><span class="hide-menu">업종 관리</span></a
+          ><span class="hide-menu">컨텐츠 관리</span></a
           >
         </li>
-        <li class="sidebar-item">
+       <!--  <li class="sidebar-item">
           <a
                   class="sidebar-link has-arrow waves-effect waves-dark"
                   href="javascript:void(0)"
@@ -229,7 +229,7 @@ function sessionLogout(){
               >
             </li>
           </ul>
-        </li>
+        </li> -->
         <li class="sidebar-item">
           <a
                   class="sidebar-link has-arrow waves-effect waves-dark"
@@ -259,7 +259,7 @@ function sessionLogout(){
             </li>
           </ul>
         </li>
-        <li class="sidebar-item">
+      <!--   <li class="sidebar-item">
           <a
                   class="sidebar-link has-arrow waves-effect waves-dark"
                   href="/admin/push/push_list"
@@ -281,8 +281,8 @@ function sessionLogout(){
               >
             </li>
           </ul>
-        </li>
-        <li class="sidebar-item">
+        </li> -->
+     <!--    <li class="sidebar-item">
           <a
                   class="sidebar-link has-arrow waves-effect waves-dark"
                   href="/admin/board/b_section_list"
@@ -304,7 +304,7 @@ function sessionLogout(){
               >
             </li>
           </ul>
-        </li>
+        </li> -->
 
         <li class="sidebar-item">
           <a
@@ -329,7 +329,7 @@ function sessionLogout(){
           </ul>
         </li>
 
-        <li class="sidebar-item">
+     <!--    <li class="sidebar-item">
           <a
                   class="sidebar-link has-arrow waves-effect waves-dark"
                   href="/admin/note/note_list"
@@ -345,7 +345,7 @@ function sessionLogout(){
               >
             </li>
           </ul>
-        </li>
+        </li> -->
 
         <li class="sidebar-item">
           <a
@@ -353,7 +353,7 @@ function sessionLogout(){
                   href="widgets.html"
                   aria-expanded="false"
           ><i class="mdi mdi-chart-bubble"></i
-          ><span class="hide-menu">영업 정산 관리</span></a
+          ><span class="hide-menu"> 정산 관리</span></a
           >
         </li>
         <li class="sidebar-item">
@@ -375,6 +375,12 @@ function sessionLogout(){
               <a href="/admin/policy/policy_list" class="sidebar-link"
               ><i class="mdi mdi-library-books"></i
               ><span class="hide-menu"> 약관 관리 </span></a
+              >
+            </li>
+                <li class="sidebar-item">
+              <a href="/admin/push/push_list" class="sidebar-link"
+              ><i class="mdi mdi-sort-variant"></i
+              ><span class="hide-menu"> PUSH 내역 </span></a
               >
             </li>
           </ul>
