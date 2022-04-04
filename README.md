@@ -5,11 +5,11 @@
 # Information
 
 - Spring
-    Spring boot RESTful API 
+    Spring RESTful API 
     Spring MVC
 
     Version
-    - Spring boot Version 2.5.6 RELEASE
+    - Spring 4.3.2.RELEASE
     - Mybatis, Lombok, aop 적용
 
 - Java
