@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="mapper.admin.CSMapper">
+
+	<select id="list" parameterType="object" resultType="hashmap">
+		/*문의 리스트*/
+		select
+			*
+		from(
+			select
+				(@ROWNUM:=@ROWNUM+1) as rownum
+				,m.*
+	            ,date_format(create_dt, '%Y-%m-%d') create_dt_yyyymmdd
+	      		,date_format(update_dt, '%Y-%m-%d') update_dt_yyyymmdd
+	      		,(select nickname from member where member_seq = m.member_seq ) as create_by_nm
+	      		from
+				notice m, (SELECT @ROWNUM:=0) TMP
+			where
+				delete_yn = 'N'
+				and show_yn = 'Y'
+			order by
+				create_dt desc
+	     ) sub
+	     order by
+			rownum 
+	</select>
+
+	
+	<select id="search" parameterType="object" resultType="hashmap">
+		
+		/*board 조회 리스트*/
+
+		select
+			*
+		from(
+			select
+				FORMAT(@ROWNUM := @ROWNUM+1, 0) as rownum
+				,u_id
+				,id as member_seq
+				,phone
+				,recommend_id
+				,name
+	            ,date_format(create_date, '%Y-%m-%d') create_dt_yyyymmdd
+	      		,date_format(update_date, '%Y-%m-%d') update_dt_yyyymmdd
+		        from
+				member m, (SELECT @ROWNUM:=0) TMP 
+			where
+				 create_date between #{start_1} and #{finish_1}
+				<if test='search_type != null  and (search_type eq "id".toString())'>
+					or u_id like concat('%',#{search_value},'%')
+				</if>
+				<if test='search_type != null  and (search_type eq "name".toString())'>
+					or name like concat('%',#{search_value},'%')
+				</if>
+				<if test='search_type != null  and (search_type eq "phone".toString())'>
+					or phone like concat('%',#{search_value},'%')
+				</if>		
+				<if test='search_type != null  and (search_type eq "all".toString())'>
+					or (name like concat('%',#{search_value},'%') or u_id like concat('%',#{search_value},'%')) or phone like concat('%',#{search_value},'%'))
+				</if>
+				and delete_yn ='N'
+			order by 
+				create_dt asc
+	     ) sub
+	     order by
+			rownum desc
+
+	</select>
+ 
+	<select id="detail" parameterType="string" resultType="hashmap">
+		/*문의 상세정보*/
+		SELECT
+			m.*
+	      	,(select name from admin where answer_by = admin_seq ) as create_by_nm
+	      	,(select nickname from member where member_seq = m.member_seq ) as write_by_nm
+		  	,date_format(m.create_dt, '%Y-%m-%d') create_dt_yyyymmdd
+            ,date_format(m.update_dt, '%Y-%m-%d') update_dt_yyyymmdd
+		FROM
+			notice m
+		where
+			notice_seq = #{seq}
+	</select>
+	
+	
+	<update id="update" parameterType="object">
+		/*문의 답변 정보 수정*/
+		update notice
+			set 
+				answer_by = #{write_by}
+				,answer_content = #{answer_content}
+				,answer_dt = now()
+		where 
+			notice_seq = #{notice_seq}
+	</update>
+
+	
+	<update id="remove" parameterType="string" >
+		/*board 정보 삭제*/
+		update notice
+			set 
+			delete_yn = 'Y'
+			,show_yn = 'N'
+		where 
+			notice_seq = #{seq}
+	</update>
+	
+
+</mapper>

@@ -1,0 +1,791 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="mapper.admin.DashBoardMapper">
+		
+		<sql id="distinctHistory">
+       		<!--  (select
+                  create_dt
+                  ,history_seq
+                  ,member_seq
+                  ,max(info_sleep_time) info_sleep_time
+                  ,end_dt
+              from sleep_history sh
+               where end_dt is not null
+               group by date_format(create_dt,'%Y-%m-%d'),member_seq)sub  -->
+               (
+                select
+                distinct(history_seq) history_seq
+                ,date_format(sh.end_dt,'%Y-%m-%d') end_dt
+            	from
+	                (select
+					    max(info_sleep_time) info_sleep_time
+	                    ,member_seq
+	                    ,date_format(end_dt,'%Y-%m-%d') end_dt
+					from sleep_history sh
+					where end_dt is not null
+	                group by date_format(end_dt,'%Y-%m-%d'),member_seq
+	                 ) inf
+                 join
+                    sleep_history sh
+                    on inf.info_sleep_time = sh.info_sleep_time and date_format(sh.end_dt,'%Y-%m-%d') = date_format(inf.end_dt,'%Y-%m-%d')
+            	) sub
+		</sql>
+	
+		
+		<sql id="growth">
+	      		 if(kb.cnt is not null, kb.cnt, '0') cnt
+				,if(kb.prev_cnt is not null, kb.prev_cnt, '0') prev_cnt
+				,if(kb.growth is not null, kb.growth, '0') growth
+				,if(kb.real_value is not null, kb.real_value, '0') real_value
+			    ,(case
+				     when kb.per_growth > 0
+				     then 'up'
+				     when 0 > kb.per_growth
+				     then 'down'
+				     else 'none'
+			    end) as percent
+		</sql>
+	
+		
+		<sql id="sub_growth">
+	     		 sub.cnt
+		        ,sub.prev_cnt
+		        ,concat(round((sub.cnt - sub.prev_cnt)/sub.prev_cnt * 100,2),'%') growth
+		        ,round((sub.cnt - sub.prev_cnt)/sub.prev_cnt,2) per_growth
+		        ,(sub.cnt - sub.prev_cnt) real_value
+		</sql>
+	
+		
+		<select id="count" parameterType="object" resultType="int">
+			/*회원 리스트*/
+			select
+				count(*) count
+			from member
+			where
+				delete_yn = 'N'
+				and show_yn = 'Y'
+	            <if test="date != null and !''.equals(date.toString())">
+			    and date_format(create_dt, '%Y-%m-%d') = date_format(#{date}, '%Y-%m-%d')
+				</if>
+	          
+		</select>
+		
+		
+		
+		<select id="total" parameterType="object" resultType="int">
+			/*회원 리스트*/
+			select
+				count(*) count
+			from member
+			where
+				delete_yn = 'N'
+				and show_yn = 'Y'
+	            <if test="date != null and !''.equals(date.toString())">
+			    and  date_format(#{date}, '%Y-%m-%d') > date_format(create_dt, '%Y-%m-%d')
+			    </if>         
+		</select>
+		
+		<select id="total_growth" parameterType="object" resultType="hashmap">
+		select
+	     	<include refid="growth" />
+	       from
+		(select
+		       	<include refid="sub_growth" />
+		    from
+		(select
+		    count(*) cnt
+		    ,(select 
+		    	count(*) 
+		    	from member m
+		    	where 
+				m.delete_yn = 'N'
+			    and m.show_yn = 'Y' and
+		    	date_add(#{date}, interval -1 day) >= date_format(create_dt, '%Y-%m-%d')) prev_cnt
+		from member m
+		where 
+			m.delete_yn = 'N'
+		    and m.show_yn = 'Y' and
+			date_format(#{date}, '%Y-%m-%d') >= date_format(create_dt, '%Y-%m-%d'))sub)kb
+        </select>
+		
+		<select id="member_total_growth" parameterType="object" resultType="hashmap">
+		select
+	     	<include refid="growth" />
+	       from
+		(select
+		       	<include refid="sub_growth" />
+		    from
+		(select
+		    count(*) cnt
+		    ,(select 
+		    	count(*) 
+		    	from member m
+		    	where 
+				m.delete_yn = 'N'
+			    and m.show_yn = 'Y' and
+		    	date_format(create_dt, '%Y-%m-%d') = date_add(#{date}, interval -1 day)) prev_cnt
+		from member m
+		where 
+			m.delete_yn = 'N'
+		    and m.show_yn = 'Y' and
+			date_format(create_dt, '%Y-%m-%d') = date_format(#{date}, '%Y-%m-%d'))sub)kb
+        </select>
+        
+       <select id="history_total_growth" parameterType="object" resultType="hashmap">
+		<!--  select
+			 <include refid="growth" />
+	       from
+              (
+              select
+		       	<include refid="sub_growth" />
+		    from
+       		 (select
+                    count(*) cnt
+                    ,(select count(*)
+                from
+                     	<include refid="distinctHistory" />
+                    where 
+                    	date_format(sub.end_dt, '%Y-%m-%d') = date_add(#{date}, interval -1 day)) prev_cnt
+                   	from
+                       <include refid="distinctHistory" />
+                    where 
+                    	date_format(sub.end_dt, '%Y-%m-%d') = date_format(#{date}, '%Y-%m-%d'))sub)kb   -->               
+ 			select
+				 <include refid="growth" />
+		       from
+				(
+			    select
+		       		<include refid="sub_growth" />
+			    from
+	         	(
+	         	select
+	            count(*) cnt
+	            ,(select
+				   count(*)
+				   from (select
+				   distinct (member_seq)
+				   from sleep_history
+				   where
+				   delete_yn = 'N'
+				   and show_yn = 'Y'
+				   and date_format(end_dt,'%Y-%m-%d') = date_add(#{date}, interval -1 day)
+				   and end_dt is not null) sb) prev_cnt
+	    	from
+	            (select
+					distinct (member_seq)
+				from sleep_history
+				where
+					delete_yn = 'N'
+					and show_yn = 'Y'
+					and date_format(end_dt,'%Y-%m-%d') = date_format(#{date},'%Y-%m-%d')
+				    and end_dt is not null)nb)sub)kb                   	   
+        </select>
+			
+		 <select id="nothistory_total_growth" parameterType="object" resultType="hashmap">
+			select
+		      	 <include refid="growth" />
+	       	from
+			(select
+		       	<include refid="sub_growth" />
+		    from
+			(
+				 select
+			   	 count(*) cnt
+			    	,(select
+			    	count(*)
+			    	from member m
+			    	where
+							m.delete_yn = 'N'
+							and m.show_yn = 'Y'
+				    and date_add(#{date}, interval -1 day) >= date_format(m.create_dt, '%Y-%m-%d')
+					and member_seq not in
+	                    (
+	                     select
+	                         member_seq
+	                     from sleep_history h
+	                     where
+							h.delete_yn = 'N'
+							and h.show_yn = 'Y'
+	                        and date_format(end_dt, '%Y-%m-%d') = date_add(#{date}, interval -1 day)
+	                      )
+			        ) prev_cnt
+				from member m
+				where
+							m.delete_yn = 'N'
+							and m.show_yn = 'Y'
+				and date_format(#{date}, '%Y-%m-%d') >= date_format(m.create_dt, '%Y-%m-%d')
+				and member_seq not in
+			        (
+			            select
+			             	member_seq
+	                    from sleep_history h
+	                    where
+							h.delete_yn = 'N'
+							and h.show_yn = 'Y'
+	                        and date_format(end_dt, '%Y-%m-%d') = date_format(#{date}, '%Y-%m-%d')
+			         )
+			    )sub
+			    )kb  
+        </select>	
+			
+		<select id="not" parameterType="object" resultType="int">
+			/* 수면 측정안한 회원 cnt */
+					select
+	            		count(*) count
+					from
+			            (select m.nickname, m.member_seq
+			            ,(select name from sleep_type where type_seq = m.type_seq) type_name
+	                    ,(select date_format(create_dt, '%Y-%m-%d')
+                        from sleep_history
+                        where member_seq = m.member_seq order by create_dt desc limit 1) last_end_dt
+		           from member m where m.member_seq not in
+		           (select
+						h.member_seq
+					from sleep_history h
+					where
+						h.delete_yn = 'N'
+						and h.show_yn = 'Y'
+						and h.end_dt is not null
+						and date_format(h.end_dt, '%Y-%m-%d') between date_add(#{date}, interval -1 day) and #{date})
+				  order by last_end_dt desc
+		           ) kb
+	                   where
+	                    kb.last_end_dt is not null
+                        and #{date} > kb.last_end_dt
+		</select>
+		
+		<select id="notList" parameterType="object" resultType="java.util.LinkedHashMap">
+			/* 수면 측정안한 회원 리스트*/
+		select
+		   if(kb.nickname is not null, kb.nickname, '-') nickname
+	       ,if(kb.type_name is not null, kb.type_name, '') type_name
+	       ,if(kb.last_end_dt is not null, kb.last_end_dt, '-') last_end_dt
+	    from
+			(select
+		       *
+		    from
+			(select
+		   		*
+			  ,(select name from sleep_type where type_seq = m.type_seq) type_name
+              ,(select date_format(end_dt, '%Y-%m-%d')
+		            from sleep_history
+		                 where member_seq = m.member_seq 
+		                 	and date_format(#{date}, '%Y-%m-%d') > date_format(end_dt, '%Y-%m-%d')
+		                 	order by end_dt desc limit 1) last_end_dt
+			from member m
+			where
+						m.delete_yn = 'N'
+						and m.show_yn = 'Y' 
+			and date_format(#{date}, '%Y-%m-%d') >= date_format(m.create_dt, '%Y-%m-%d')
+			and member_seq not in
+		        (
+		            select
+		             	member_seq
+                    from sleep_history h
+                    where
+						h.delete_yn = 'N'
+						and h.show_yn = 'Y'
+						<choose>
+					    	<when test="date_diff == null">
+								and date_format(h.end_dt, '%Y-%m-%d') = date_format(#{date}, '%Y-%m-%d')
+					    	</when>
+					    	<when test="date_diff != null and !''.equals(date_diff.toString())">
+								and date_format(h.end_dt, '%Y-%m-%d') between date_add(now(), interval  -#{date_diff} day) and now()
+					    	</when>
+					    </choose>
+		       	  )
+		    	)sub
+		           order by last_end_dt desc
+		    )kb
+	           where
+	               <!--  kb.last_end_dt is null  
+                    or #{date} > kb.last_end_dt -->
+                    1=1
+          			<choose>
+					    	<when test="date_diff != null  and (date_diff eq '30'.toString())">
+                            	and date_add(#{date}, interval -30 day) and #{date} > kb.last_end_dt 	
+					    	</when>
+					    	<when test="date_diff != null  and (date_diff != '30')">
+					    		and date_format(date_add(#{date}, interval -#{date_diff} day), '%Y-%m-%d') > kb.last_end_dt 
+					    	</when>
+				   </choose>		
+	    </select>
+		
+		<select id="history" parameterType="object" resultType="int">
+			/*history 리스트*/
+			 select count(*) count
+            from
+            (select
+				distinct (member_seq)
+			from sleep_history
+			where
+				delete_yn = 'N'
+				and show_yn = 'Y'
+				and date_format(end_dt,'%Y-%m-%d') = date_format(#{date},'%Y-%m-%d')
+			    and end_dt is not null)sub
+			<!-- 	and end_dt between date_add(#{date}, interval -1 day) and #{date} -->
+		</select>
+	
+		<select id="play" parameterType="object" resultType="java.util.LinkedHashMap">
+			/*content_play history 리스트*/
+			select
+                rownum
+                ,if(kb.title is not null, kb.title, '') title
+                ,if(kb.count is not null, kb.count, '') count
+                from
+            (select
+	        	(@ROWNUM:=@ROWNUM+1) as rownum
+		    	,sub.*
+	    	from(
+				select
+	        		if(c.title is not null, c.title, '') title
+	        		,count(*) count
+				    , s.end_dt
+				from sleep_history s
+					left join content c on c.content_seq = s.last_content_seq
+				where s.last_content_seq is not null
+				    and c.delete_yn ='N'
+				    and c.show_yn ='Y'
+				    <if test="type_seq != null and !''.equals(type_seq.toString())">
+					and c.type_seq = #{type_seq}
+					</if>
+					group by  s.last_content_seq
+				order by
+				(select count(*)
+					from sleep_history where s.last_content_seq = last_content_seq) desc
+				) sub ,(SELECT @ROWNUM:=0) TMP
+                    where  date_format(#{date}, '%Y-%m-%d') > date_format(sub.end_dt, '%Y-%m-%d'))kb
+			     order by
+					rownum asc
+		</select>
+		
+		<select id="goods" parameterType="object" resultType="java.util.LinkedHashMap">
+			/* goods history 리스트*/		
+			select
+			    rownum
+                ,if(kb.title is not null, kb.title, '') title
+                ,if(kb.count is not null, kb.count, '') count
+                from
+                  (select
+                      (@ROWNUM:=@ROWNUM+1) as rownum
+                      ,sub.*
+                 from
+            (select
+                   c.title
+                ,count
+                ,c.type_seq
+                ,kb.create_dt
+            from
+            (select
+                    count(*) count
+                ,content_seq
+                ,create_dt
+            from content_goods
+            where
+            	 delete_yn = 'N'
+                  and show_yn ='Y' and
+                  date_format(#{date}, '%Y-%m-%d') > date_format(create_dt, '%Y-%m-%d') 
+            group by content_seq
+                )kb
+             left join      
+             content c
+            on c.content_seq = kb.content_seq
+            where 
+            	  delete_yn = 'N'
+                  and show_yn ='Y'
+          	)sub, (SELECT @ROWNUM:=0) TMP
+                where
+                	1=1
+                	<if test="type_seq != null and !''.equals(type_seq.toString())">
+					and type_seq = #{type_seq}
+					</if>
+				  order by count desc
+                        )kb
+		     order by
+				rownum desc
+			
+		</select>
+		
+		<select id="contact" parameterType="object" resultType="hashmap">
+			/* contact 리스트*/
+			select
+			*
+			from(
+				select
+					(@ROWNUM:=@ROWNUM+1) as rownum
+					,m.*
+		      		from
+					notice m, (SELECT @ROWNUM:=0) TMP
+				where
+					delete_yn = 'N'
+					and show_yn = 'Y'
+					and answer_by is null
+	            order by create_dt desc limit 10
+		     ) sub
+		     order by
+				rownum asc
+		</select>
+		
+		<select id="mission_cnt" parameterType="object" resultType="java.util.LinkedHashMap">
+				select
+		                sk.name,
+		                 (case
+		                    when smk.count is not null
+		                    then smk.count
+		                    else 0
+		                    end
+		                 )count
+		        from sleep_mission_keyword sk left join
+		            (select
+		                    kb.mission_seq
+		                    ,count(*) count
+		                    ,keyword_seq
+		                from
+		            (select
+					        sub.history_seq
+					        ,p.mission_seq
+					from
+					     <include refid="distinctHistory" />
+					left join
+							mission_complate p
+					on p.history_seq = sub.history_seq
+					where p.history_seq is not null
+					    and date_format(p.create_dt, '%Y-%m-%d') = date_format(#{date}, '%Y-%m-%d'))kb
+		            left join sleep_mission sm on sm.mission_seq = kb.mission_seq
+		            group by keyword_seq) smk on smk.keyword_seq = sk.keyword_seq
+		     	    where sk.keyword_seq != 1
+		            order by sk.keyword_seq
+		</select>
+		
+		
+		<select id="mission_complate" parameterType="object" resultType="java.util.LinkedHashMap">
+			/* 일일 미션 완료한 사람*/
+			select
+			    smk.name,
+				smk.keyword_seq,
+			    (case
+					 when mk.cnt is not null
+						 then mk.cnt
+				        else 0
+					 end
+				)count
+			    from
+			sleep_mission_keyword smk
+			        left join
+			(select
+			        sm.keyword_seq
+			        ,kb.cnt
+			from
+			(select
+			        sub.history_seq
+			        ,p.mission_seq
+			        ,count(*) cnt
+			from
+			     <include refid="distinctHistory" />
+			left join
+					mission_complate p
+			on p.history_seq = sub.history_seq
+			where p.history_seq is not null
+			    and date_format(p.create_dt, '%Y-%m-%d') = date_format(#{date}, '%Y-%m-%d')
+			group by mission_seq
+			    )kb
+			    left join
+			    sleep_mission sm
+			    on sm.mission_seq = kb.mission_seq
+			    where
+			     sm.type_seq = #{type_seq}
+			    )mk
+			on smk.keyword_seq = mk.keyword_seq
+			  where smk.keyword_seq != 1
+			order by smk.keyword_seq
+		</select>
+	
+		
+		<select id="type" parameterType="object" resultType="hashmap">
+			select
+			    count(m.type_seq) as count
+			    ,p.name
+			    ,p.type_seq
+			    from member m left join sleep_type p on m.type_seq = p.type_seq
+			    where m.delete_yn = 'N'
+			    and m.show_yn = 'Y'
+	            and p.delete_yn = 'N'
+			    and p.show_yn = 'Y'
+	            and date_format(#{date}, '%Y-%m-%d') > date_format(m.create_dt, '%Y-%m-%d')
+			group by m.type_seq
+		</select>
+		
+		
+		<select id="type_history" parameterType="object" resultType="hashmap">
+				select
+	       			count(*) count
+	        		,if(st.name is not null, st.name, '') name
+				from
+	            (select
+				   distinct(member_seq) member
+				    ,prev_type_seq
+				from sleep_history s
+				where
+				    s.delete_yn = 'N'
+				    and s.show_yn = 'Y'
+				    and end_dt is not null
+				and date_format(end_dt, '%Y-%m-%d') = date_format(#{date}, '%Y-%m-%d'))sub
+				left join    sleep_type st
+	            on sub.prev_type_seq = st.type_seq
+	            where
+                    delete_yn = 'N'
+                    and show_yn = 'Y'
+	            group by type_seq
+		</select>
+		
+		<select id="keyword" parameterType="object" resultType="hashmap">
+		/* 미션 키워드 리스트*/
+			select
+				keyword_seq as count
+	      		from
+				sleep_mission_keyword m
+			where
+				delete_yn = 'N'
+				and keyword_seq != 1
+			order by
+				keyword_seq 
+	</select>
+		
+	<select id="avg" parameterType="object" resultType="hashmap">
+		select * 
+			from (
+                  select 
+                  		date_format(end_dt, '%Y-%m-%d') end_dt
+                       	,round(avg(band_score)) band_score_avg
+                        ,round(avg(band_deep_time)) avg_band_deep_time
+                        ,round(avg(band_rem_time)) avg_band_rem_time
+		                ,round(avg(band_stop_cnt)) avg_band_stop_cnt
+		                ,round(avg(band_action_cnt)) avg_band_action_cnt
+                  from sleep_history
+                  where
+					1=1
+					<if test="device != null and !''.equals(device.toString())">
+						and device = #{device}
+						</if>
+					<if test="type_seq != null and !''.equals(type_seq.toString())">
+						and type_seq = #{type_seq}
+						</if>
+                  	   group by date_format(end_dt, '%Y-%m-%d')
+              ) sub
+		where 
+			date_format(sub.end_dt, '%Y-%m-%d')
+			between
+					DATE_FORMAT(
+					      DATE_ADD(#{date}, INTERVAL (WEEKDAY(#{date})) * -1 DAY),
+					      '%Y-%m-%d'
+					    )
+					and
+					DATE_FORMAT(
+					    	DATE_ADD(#{date}, INTERVAL (6 - WEEKDAY(#{date})) * +1 DAY),
+		                  '%Y-%m-%d'
+		            )
+		</select>
+		
+		
+	<select id="avgChart" parameterType="object" resultType="java.util.LinkedHashMap">
+		select
+	        kb.end_dt
+            ,round(avg(kb.band_score)) '전체 사용자 평균 수면점수'
+			<if test='device != null  and (device eq "1".toString())'>
+	        ,round(avg(kb.info_sleep_time_score)) '총 수면 시간'
+	        ,round(avg(kb.band_deep_time_score)) '깊은 수면 비율'
+	        ,round(avg(kb.band_rem_time_score)) 'REM 수면 비율'
+	        ,round(avg(kb.band_stop_score)) '수면 중단 횟수'
+	        ,round(avg(kb.band_action_score)) '뒤척임 횟수'
+	        ,round(avg(kb.question1_score)*0.5+avg(kb.question2_score)*0.5) '수면 만족도'
+	        ,round(avg(kb.mission_score)*0.4+avg(kb.time_elvt_score)*0.3+avg(kb.snuize_score)*0.3) '고니 Sleep 요소'
+	        </if>
+			<if test='device != null  and (device eq "2".toString())'>
+	        ,round(avg(kb.info_sleep_time_score)) '총 수면 시간'
+	        ,round(avg(kb.mob_stop_score)) '수면 중단 횟수'
+	        ,round(avg(kb.question1_score)*0.5+avg(kb.question2_score)*0.5) '수면 만족도'
+	        ,round(avg(kb.mission_score)*0.4+avg(kb.time_elvt_score)*0.3+avg(kb.snuize_score)*0.3) '고니 Sleep 요소'
+	        </if>
+			from
+		(select sub.*
+      	,(case
+            when sub.mission_cnt =6 then 100
+            when sub.mission_cnt =5 then 83
+            when sub.mission_cnt =4 then 67
+            when sub.mission_cnt =3 then 50
+            when sub.mission_cnt =2 then 33
+            when sub.mission_cnt =1 then 17
+            when sub.mission_cnt =0 then 0
+            else 0
+            end
+        ) mission_score
+    	,(case
+        	when sub.band_deep_time_calc between 13 and 23 then 100
+        	when sub.band_deep_time_calc between 11.5 and 13 then 90
+			when sub.band_deep_time_calc between 23 and 24.5 then 90
+        	when sub.band_deep_time_calc between 10 and 11.5 then 80
+			when sub.band_deep_time_calc between 24.5 and 26 then 80
+        	when sub.band_deep_time_calc between 7 and 10 then 60
+			when sub.band_deep_time_calc between 26 and 29 then 60
+        	when sub.band_deep_time_calc between 4 and 7 then 40
+			when sub.band_deep_time_calc between 29 and 32 then 40
+        	when 4 > sub.band_deep_time_calc then 0
+        	when band_deep_time_calc > 32 then 0
+        	else 0
+       		 end
+    	) band_deep_time_score
+     	,(case
+            when sub.band_rem_time_calc between 20 and 25 then 100
+            when sub.band_rem_time_calc between 17.5 and 20 then 90
+		    when sub.band_rem_time_calc between 25 and 27.5 then 90
+            when sub.band_rem_time_calc between 15 and 17.5 then 80
+			when sub.band_rem_time_calc between 27.5 and 30 then 80
+			when sub.band_rem_time_calc between 30 and 35 then 60
+            when sub.band_rem_time_calc between 10 and 15 then 60
+			when sub.band_rem_time_calc between 35 and 40 then 40
+            when sub.band_rem_time_calc between 5 and 10 then 40
+            when 5 > sub.band_rem_time_calc then 0
+            when sub.band_rem_time_calc >= 40 then 0
+            else 0
+            end
+        ) band_rem_time_score
+        ,(case
+            when sub.question1_val = 5 then 100
+            when sub.question1_val = 4 then 75
+            when sub.question1_val = 3 then 50
+            when sub.question1_val = 2 then 25
+            when sub.question1_val = 1 then 0
+            else 0
+            end
+        ) question1_score
+        ,(case
+            when sub.question2_val = 5 then 100
+            when sub.question2_val = 4 then 75
+            when sub.question2_val = 3 then 50
+            when sub.question2_val = 2 then 25
+            when sub.question2_val = 1 then 0
+            else 0
+            end
+        ) question2_score
+   		 from
+	(select
+  	  	date_format(h.end_dt, '%Y-%m-%d') end_dt
+	    ,h.band_score
+  	  	,round((h.band_deep_time/ h.info_sleep_time)*100,2) band_deep_time_calc	
+    	,round((h.band_rem_time/ h.info_sleep_time)*100,2) band_rem_time_calc
+    	,h.band_stop_cnt
+    	,(case
+	        when info_sleep_time between 25200000 and 32400000 then 100
+	        when info_sleep_time between 22500000 and 25200000 then 90
+	        when info_sleep_time between 32400000 and 35100000 then 90
+	        when info_sleep_time between 19800000 and 22500000 then 80
+	        when info_sleep_time between 14400000 and 19800000 then 60
+	        when info_sleep_time between 37800000 and 43200000 then 60
+	        when info_sleep_time between 9000000 and 14400000 then 40
+	        when info_sleep_time between 43200000 and 48600000 then 40
+	        when 9000000 > info_sleep_time then 0
+	        when info_sleep_time >= 48600000 then 0
+	        end
+	    )info_sleep_time_score
+    	,(case
+                when  h.band_stop_cnt = 0 then 100
+                when  h.band_stop_cnt = 1 then 80
+                when  h.band_stop_cnt = 2 then 60
+                when  h.band_stop_cnt = 3 then 40
+                when  h.band_stop_cnt > 4 then 0
+                else 0
+                end
+        ) band_stop_score
+        ,(case
+                when  h.mob_stop_cnt = 0 then 100
+                when  h.mob_stop_cnt = 1 then 80
+                when  h.mob_stop_cnt = 2 then 60
+                when  h.mob_stop_cnt = 3 then 40
+                when  h.mob_stop_cnt > 4 then 0
+                else 0
+                end
+        ) mob_stop_score
+    	,(case
+            when  h.band_action_cnt = 0 then 100
+            when  h.band_action_cnt between 1 and 2 then 90
+            when  h.band_action_cnt between 3 and 4 then 80
+            when  h.band_action_cnt between 5 and 6 then 70
+            when  h.band_action_cnt >= 7 then 0
+            else 0
+            end
+        ) band_action_score
+    	,(select count(*) from mission_complate where h.history_seq = history_seq and delete_yn ='N') mission_cnt
+    	,(case
+            when  h.re_alarm_cnt =0 then 100
+            when  h.re_alarm_cnt =1 then 90
+            when  h.re_alarm_cnt =2 then 80
+            when  h.re_alarm_cnt =3 then 70
+            when  h.re_alarm_cnt =4 then 60
+            when  h.re_alarm_cnt =5 then 50
+            when  h.re_alarm_cnt =6 then 40
+            when  h.re_alarm_cnt =7 then 30
+            when  h.re_alarm_cnt =8 then 20
+            when  h.re_alarm_cnt =9 then 10
+            else 0
+            end
+        ) snuize_score
+         <!-- ,(case
+                when h.time_elvtn between 300000 and 1800000 then 100
+                else 0
+                end
+            ) time_elvt_score -->
+			,(case
+                when device=2 and (mob_rea_start_time - sleep_start_time) between 300 and 1800 then 100
+                 when device=2 and (mob_rea_start_time - sleep_start_time) > 1800 then 0
+                 when  device=2 and 300 > (mob_rea_start_time - sleep_start_time) then 0
+                 when device=1 and (band_rea_start_time - sleep_start_time) between 300 and 1800 then 100
+                 when device=1 and (band_rea_start_time - sleep_start_time) > 1800 then 0
+                 when  device=1 and 300 > (band_rea_start_time - sleep_start_time) then 0
+                end
+            ) time_elvt_score
+	        ,(select val from sleep_result_example where example_seq = (select example_seq from sleep_history_result where h.history_seq = history_seq and question_seq = 1 order by h.create_dt limit 1)) question1_val
+	        ,(select val from sleep_result_example where example_seq = (select example_seq from sleep_history_result where h.history_seq = history_seq and question_seq = 2 order by h.create_dt limit 1)) question2_val
+			from sleep_history h join (
+                select
+                distinct(history_seq) history_seq
+                ,date_format(sh.end_dt,'%Y-%m-%d') end_dt
+            	from
+	                (select
+					    max(info_sleep_time) info_sleep_time
+	                    ,member_seq
+	                    ,date_format(end_dt,'%Y-%m-%d') end_dt
+					from sleep_history sh
+					where end_dt is not null
+					<if test='device != null  and (device eq "1".toString())'>
+						and device = 1
+					</if>
+					<if test='device != null  and (device eq "2".toString())'>
+						and device = 2
+					</if>
+					<if test="type_seq != null and !''.equals(type_seq.toString())">
+						and prev_type_seq = #{type_seq}
+					</if>
+				    group by date_format(end_dt,'%Y-%m-%d'),member_seq
+	                 ) inf
+                 join
+                    sleep_history sh
+                    on inf.info_sleep_time = sh.info_sleep_time and date_format(sh.end_dt,'%Y-%m-%d') = date_format(inf.end_dt,'%Y-%m-%d')
+            	)fb on h.history_seq = fb.history_seq
+		    where h.end_dt is not null
+			) sub )kb
+		    where
+		  date_format(kb.end_dt,'%Y-%m-%d')
+		  between
+						DATE_FORMAT(
+					      DATE_ADD(#{date}, INTERVAL (WEEKDAY(#{date})) * -1 DAY),
+					      '%Y-%m-%d'
+					    )
+					and
+					    date_format(
+					    	DATE_ADD(#{date}, INTERVAL (6 - WEEKDAY(#{date})) * +1 DAY),
+		                      '%Y-%m-%d'
+		                )
+		         group by date_format(kb.end_dt, '%Y-%m-%d')
+		</select>
+</mapper>

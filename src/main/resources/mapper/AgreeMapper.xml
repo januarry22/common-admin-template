@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="mapper.admin.AgreeMapper">
+
+	<select id="list" parameterType="object" resultType="hashmap">
+		/* 약관 리스트*/
+		select
+			*
+		from(
+			select
+				(@ROWNUM:=@ROWNUM+1) as rownum
+				,m.*
+	            ,date_format(create_dt, '%Y-%m-%d') create_dt_yyyymmdd
+	      		,date_format(update_dt, '%Y-%m-%d') update_dt_yyyymmdd
+	      		,(CASE
+						WHEN agree_type = 'MYAGREE' then '개인정보 수집 및 이용약관'
+	      				WHEN agree_type = 'LOCATION' then '위치정보 이용약관'
+	      				WHEN agree_type = 'USE' then '서비스 이용약관'
+	      				WHEN agree_type = 'RESIGN' then '회원 탈퇴 약관'
+	      			ELSE ''
+	      			END
+	      		) as type_info
+	      		from
+				agree m, (SELECT @ROWNUM:=0) TMP 
+			where
+				delete_yn = 'N'
+				and show_yn = 'Y'
+				and agree_type = #{agree_type}
+			order by 
+				create_dt asc
+	     ) sub
+	     order by
+			rownum desc
+	</select>
+
+	
+
+	<insert id="create" parameterType="object">
+		/* 약관 생성*/
+			insert into
+				agree
+				(
+					agree_type
+					,content
+					,create_dt
+					,create_by
+				)
+				values
+				(
+					#{agree_type}
+					,#{content}
+					,now()
+					,#{create_by}
+				)
+	</insert>
+	
+	
+	
+	<select id="detail" parameterType="string" resultType="hashmap">
+		/*약관 상세정보*/
+		SELECT
+			m.*
+		  	,date_format(m.create_dt, '%Y-%m-%d') create_dt_yyyymmdd
+            ,date_format(m.update_dt, '%Y-%m-%d') update_dt_yyyymmdd
+            	,(CASE
+						WHEN agree_type = 'MYAGREE' then '개인정보처리방침'
+	      				WHEN agree_type = 'LOCATION' then '위치기반 서비스 동의'
+	      				WHEN agree_type = 'USE' then '이용약관'
+	      				WHEN agree_type = 'RESIGN' then '회원 탈퇴 약관'
+	      			ELSE ''
+	      			END
+	      		) as type_info
+		FROM
+			agree m
+		where
+			agree_seq = #{seq}
+	</select>
+	
+	
+	<update id="update" parameterType="object">
+		/*약관 정보 수정*/
+		update agree
+			set 
+				content = #{content}
+				,agree_type = #{agree_type}
+				,update_dt = now()
+				,update_by = #{create_by}
+		where 
+			agree_seq = #{agree_seq}
+	</update>
+
+	
+</mapper>

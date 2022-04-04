@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="mapper.admin.CommonMapper">
+
+	
+	<select id="common" parameterType="object" resultType="hashmap">
+		/* common 테이블 */
+		select
+			*
+		from
+			common
+		where
+			up_code = #{up_code}
+	</select>
+	
+	<update id="delete" parameterType="string" >
+		/* 공통 정보 삭제*/
+		update ${table_name}
+			set 
+			delete_yn = 'Y'
+			,show_yn = 'N'
+		where 
+			${column_name} = #{seq} 
+	</update>
+	
+	<select id="common_chk" parameterType="string" resultType="hashmap">
+		/* 중복 체크 */
+		SELECT
+			*
+		FROM
+			${table_name}
+		where
+			${column_name} = #{column_value} 
+	</select>
+	
+	<select id="show_yn" parameterType="string" resultType="hashmap">
+		/* 공통 노출 여부 */
+		update ${table_name}
+			set 
+				show_yn = #{show_yn} 
+		where 
+			${column_name} = #{seq} 
+	</select>
+
+	<insert id="category" parameterType="object">
+		/* 카테고리 생성*/
+			insert into
+				common
+				(
+					up_code
+					,info_code
+					,name
+					,sort
+					,note
+					,create_dt
+					,create_by
+				)
+				values
+				(
+					#{up_code}
+					,#{info_code}
+					,#{name}
+					,#{sort}
+					,#{note}
+					,now()
+					,#{create_by}
+				)
+	</insert>
+	
+	
+	<update id="update" parameterType="object">
+		/*카테고리  수정*/
+		update common
+			set 
+				up_code = #{up_code}
+				,info_code = #{info_code}
+				,name = #{name}
+				,sort = #{sort}
+				,note = #{note}
+		where 
+			common_seq = #{common_seq}
+	</update>
+	
+	
+	
+	<select id="detail" parameterType="object" resultType="hashmap">
+		/* common 테이블 */
+		select
+			*
+		from
+			common
+		where
+			common_seq = #{seq}
+	</select>
+	
+</mapper>
