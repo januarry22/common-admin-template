@@ -41,7 +41,13 @@ public class NoteController {
 		model.addAttribute("category",(List<HashMap<String,Object>>) masterService.dataList("mapper.admin.BoardMapper", "common", null));
 		return "layout/note/detail";
 	}
-
+	/* 관리자 노트 상세 */
+	@RequestMapping(value = {"/{seq}"} , method = RequestMethod.GET)
+	public String noteDetails(Model model , @PathVariable String seq ) throws Exception {
+		model.addAttribute("detail", masterService.dataRead("mapper.admin.BoardMapper", "detail", seq));
+		model.addAttribute("category",(List<HashMap<String,Object>>) masterService.dataList("mapper.admin.BoardMapper", "common", null));
+		return "layout/note/detail";
+	}
 	/* 관리자 노트 생성 */
 	@RequestMapping(value = {"/create"} , method = RequestMethod.GET)
 	public String noteCreate(Model model) throws Exception {
