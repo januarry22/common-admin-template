@@ -45,27 +45,6 @@ public class MemberController {
 		commonService.commonList(model,"JOB");
 		return "layout/member/list";
 	}
-	@RequestMapping(value = {"/excel"}, method = RequestMethod.GET)
-	public ModelAndView excelView(Model model) throws Exception {
-		//List<LinkedHashMap> list = (List<LinkedHashMap>) masterService.dataList("mapper.admin.MemberMapper", "excel", null);
-		List<LinkedHashMap> list = (List) MasterDao.dataList("mapper.admin.MemberMapper", "excel", null);
-		for(int i = 0 ; i < list.size() ; i++) {
-			HashMap paramMap = new HashMap<String, Object>();
-			paramMap.put("member_seq", list.get(i).get("member_seq"));
-			List<HashMap<String,Object>> drug = (List) masterService.dataList("mapper.admin.MemberMapper", "excel_drug", paramMap);
-		//	System.out.print("drug ::"+drug+"\n");
-			String result = Common.ArrayToString(drug);
-			list.get(i).put("drug", result);		
-		}
-		HashMap<String, Object> map = new HashMap<String, Object>();
-		String[] header = {"회원SEQ","닉네임","회원가입 날짜","성별","출생년도","직업","수면유형","질병 및 약물"};
-		map.put("headers", header);
-		map.put("filename", "gonne-userinfo");
-		map.put("datas", list);
-		
-		return new ModelAndView("excelView", map); 
-		//return null;
-	}
 	@RequestMapping(value = {"/{seq}"} , method = RequestMethod.GET)
 	public String MemberDetailGET(Model model , @PathVariable String seq ) throws Exception {
 		model.addAttribute("detail", masterService.dataRead("mapper.admin.MemberMapper", "detail", seq));
@@ -76,16 +55,5 @@ public class MemberController {
 		commonService.goodsList(model, seq);
 		commonService.historyList(model, seq);
 		return "layout/member/read";
-	}
-//	@RequestMapping(value = {"/create"} , method = RequestMethod.GET)
-//	public String MemberAddGET(Model model) throws Exception {
-//		return "adminLayout/admin/member/create";
-//	}
-//	@RequestMapping(value = {"/update/{seq}"} , method = RequestMethod.GET)
-//	public String MemberUpdateGET(Model model, @PathVariable String seq) throws Exception {
-//		model.addAttribute("detail", masterService.dataRead("mapper.admin.MemberMapper", "detail", seq));
-//
-//		return "layout/member/update";
-//	}
-	                            
+	}                      
 }

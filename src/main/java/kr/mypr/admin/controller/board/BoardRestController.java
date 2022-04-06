@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import kr.mypr.admin.service.MasterService;
 import kr.mypr.admin.util.Common;
 @RestController
-@RequestMapping(value = "/supervise/admin/v1/board/**")
+@RequestMapping(value = "/admin/v1/board/**")
 public class BoardRestController {
 
 
